@@ -63,7 +63,31 @@ def byte_extraction(l):
 def binary_to_bit(content):
     return ''.join(ascii_to_bit(i) for i in content)
 
+def max_prob(height, width):
+    return( ((height-1)*width) + (height*(width -1)) )
 
+def divide_to_planes(bit_array, arr_dim):
+    res = []
+    remain_col = arr_dim[0] % 8
+    remain_row = arr_dim[1] % 8
+
+    max_col = arr_dim[0]//8 + 1
+    max_row = arr_dim[1]//8 + 1
+
+    for i in range(max_row):
+        temp_arr = []
+        for j in range(max_col):
+            max_rep = 8 if (i < (max_row-1)) else remain_row
+            temp_arr1 = []
+            for k in range(max_rep):
+                temp_arr2 = bit_array[ ( (i*8 +k)*arr_dim[0] + (j*8) ) : (((i*8 +k)*arr_dim[0] + (j*8) ) + 8)  ] if (j < (max_col-1)) else bit_array[ ( (i*8 +k)*arr_dim[0] + (j*8) ) : (((i*8 +k)*arr_dim[0] + (j*8) ) + remain_col)  ]
+                temp_arr1.append(temp_arr2)
+            res.append(temp_arr1)
+    return res
+    
+
+def bpcs_encrypt(image_path, message_path, threshold=0.3):
+    return
 
 
 # Steganography Main Class
@@ -190,18 +214,18 @@ class Stegano():
         else:
             return False
 
-print("============================== Start ==============================")
-start_time = time.time()
-stego = Stegano()
+# print("============================== Start ==============================")
+# start_time = time.time()
+# stego = Stegano()
 
-ori_path = 'LogoITB.png'
-message_path = 'tato.png'
-# stego_path = 'LogoITB-stego.png'
-key = 50
+# ori_path = 'LogoITB.png'
+# message_path = 'tato.png'
+# # stego_path = 'LogoITB-stego.png'
+# key = 50
 
-# if stego.payload_containable_image_LSB(ori_path, message_path):
-#     stego.LSB_encrypt_image(ori_path, message_path, key)
-# stego.LSB_decrypt_image(stego_path, key)
+# # if stego.payload_containable_image_LSB(ori_path, message_path):
+# #     stego.LSB_encrypt_image(ori_path, message_path, key)
+# # stego.LSB_decrypt_image(stego_path, key)
 
-print("--- %s seconds ---" % (time.time() - start_time))
-print("============================== End ==============================")
+# print("--- %s seconds ---" % (time.time() - start_time))
+# print("============================== End ==============================")
