@@ -71,11 +71,14 @@ class Stegano():
     @staticmethod
     def LSB_encrypt_image(image_path, message_path, key=0):
         # Initialize
-        output_file = image_path[:-4] + '-stego' + image_path[-4:]
         image_array, initial_dim = read_image(image_path)
+        image_path = image_path.split('/')
+        output_file = image_path[0] + '/stego/' + image_path[2]
 
-        # Read Message File
         content = read_file(message_path)
+
+        message_path = message_path.split('/')
+        message_path = message_path[-1]
 
         # Message and Description Into Bit
         bits = binary_to_bit(content)
@@ -163,7 +166,7 @@ class Stegano():
             idx_list = idx_list[8:]
         
         # Write Message
-        f = open(file_name, 'wb')
+        f = open('test/message/' + file_name, 'wb')
         f.write(content)
         f.close()
         print('Message File Saved as ' + file_name)
@@ -190,18 +193,20 @@ class Stegano():
         else:
             return False
 
+
+
 print("============================== Start ==============================")
 start_time = time.time()
 stego = Stegano()
 
-ori_path = 'LogoITB.png'
-message_path = 'tato.png'
-# stego_path = 'LogoITB-stego.png'
+ori_path = 'test/ori/LogoITB.png'
+message_path = 'test/ori/tato.png'
+stego_path = 'test/stego/LogoITB.png'
 key = 50
 
 # if stego.payload_containable_image_LSB(ori_path, message_path):
 #     stego.LSB_encrypt_image(ori_path, message_path, key)
-# stego.LSB_decrypt_image(stego_path, key)
+stego.LSB_decrypt_image(stego_path, key)
 
 print("--- %s seconds ---" % (time.time() - start_time))
 print("============================== End ==============================")
