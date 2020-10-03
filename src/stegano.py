@@ -3,7 +3,29 @@ import numpy as np
 import os
 import random
 import time
+from math import log10, sqrt
 
+# File Management
+def read_image(path):
+    image = Image.open(path)
+    image_array = np.array(image)
+    image_dim = image_array.shape
+    image_array = np.ravel(image_array)
+    image.close()
+
+    return image_array, image_dim
+
+def read_file(path):
+    f = open(path, 'rb')
+    content = f.read()
+    f.close()
+
+    return content
+
+
+
+
+# Bitwise Functions
 def str_to_bit(text):
     result = ''
     sep = ''
@@ -38,23 +60,25 @@ def byte_extraction(l):
     bits = ''.join(str(bit_extraction(each)) for each in l)
     return int(bits, 2).to_bytes(1, 'big')
 
+def binary_to_bit(content):
+    return ''.join(ascii_to_bit(i) for i in content)
+
+
+
+
+# Steganography Main Class
 class Stegano():
     @staticmethod
     def LSB_encrypt_image(image_path, message_path, key=0):
         # Initialize
         output_file = image_path[:-4] + '-stego' + image_path[-4:]
-        ori_image = Image.open(image_path)
-        image_array = np.array(ori_image)
-        ori_initial_dim = image_array.shape
-        image_array = np.ravel(image_array)
+        image_array, initial_dim = read_image(image_path)
 
         # Read Message File
-        f = open(message_path, 'rb')
-        content = f.read()
-        f.close()
+        content = read_file(message_path)
 
         # Message and Description Into Bit
-        bits = ''.join(ascii_to_bit(i) for i in content)
+        bits = binary_to_bit(content)
         bits_len = len(bits)
         if key:
             prefix = ascii_to_bit(len(message_path)+128) + str_to_bit(message_path) + ascii_to_bit(int(len(int_to_bit(bits_len))/8)) + int_to_bit(bits_len)
@@ -80,7 +104,8 @@ class Stegano():
             image_array[num] = bit_insertion(image_array[num], int(bits[i]))
         
         # Save Stego Image
-        image_array = np.reshape(image_array, (ori_initial_dim[0], ori_initial_dim[1], ori_initial_dim[2]))
+        image_array = np.reshape(image_array, initial_dim)
+
         stego_image = Image.fromarray(image_array.astype('uint8'), 'RGB')
         stego_image.save(output_file)
         print('Stego File save as: ' + output_file)
@@ -88,9 +113,7 @@ class Stegano():
     @staticmethod
     def LSB_decrypt_image(stego_path, key=0):
         # Initialize Image List and Content
-        stego = Image.open(stego_path)
-        stego_array = np.array(stego)
-        stego_array = np.ravel(stego_array)
+        stego_array, dim = read_image(stego_path)
         content = bytearray()
         acak = False
 
@@ -145,28 +168,40 @@ class Stegano():
         f.close()
         print('Message File Saved as ' + file_name)
 
+    @staticmethod
+    def PSNR_image(ori_arr, stego_arr):
+        rms = np.mean((ori_arr - stego_arr) ** 2)
+        if(rms == 0):
+            return 100
+        return 20 * log10(255 / sqrt(rms))
+
+    @staticmethod
+    def payload_containable_image_LSB(ori_path, message_path):
+        ori_array, ori_dim = read_image(ori_path)
+        ori_size = 1
+        for each in ori_dim:
+            ori_size *= each
+            
+        message_size = os.stat(message_path).st_size
+        message_description_len = 1+len(message_path) + 1+(len(int_to_bit(message_size))/8)
+
+        if ori_size >= (message_description_len+message_size)*8:
+            return True
+        else:
+            return False
 
 print("============================== Start ==============================")
 start_time = time.time()
 stego = Stegano()
 
 ori_path = 'LogoITB.png'
-ori_size = os.stat(ori_path).st_size
 message_path = 'tato.png'
-message_size = os.stat(message_path).st_size
-stego_path = 'LogoITB-stego.png'
+# stego_path = 'LogoITB-stego.png'
 key = 50
 
-
-# message_description_len = 1+len(message_path) + 1+(len(int_to_bit(message_size))/8)
-# if ori_size >= (message_description_len+message_size)*8:
+# if stego.payload_containable_image_LSB(ori_path, message_path):
 #     stego.LSB_encrypt_image(ori_path, message_path, key)
-#     pass
-# else:
-#     print('Cover image can not hold the message')
-stego.LSB_decrypt_image(stego_path, key)
+# stego.LSB_decrypt_image(stego_path, key)
 
 print("--- %s seconds ---" % (time.time() - start_time))
 print("============================== End ==============================")
-
-# 00000001 01011100 11011000
