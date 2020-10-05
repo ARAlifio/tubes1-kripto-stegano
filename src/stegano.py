@@ -97,8 +97,15 @@ def LSB_decrypt(file_name_len, file_size, file_size_len, stego_array, key=0, res
     # Initialize acak Pixel List
     idx_list = []
     content = bytearray()
-    start = 1+file_name_len if file_name_len!=0 else 0
-    start += 1+file_size_len if file_size_len!=0 else 0
+    start = 0
+    if file_name_len!=0:
+        start += 1+file_name_len
+    else:
+        start += 0
+    if file_size_len!=0:
+        start += 1+file_size_len
+    else:
+        start += 0
     for i in range(start*8, len(stego_array)):
         idx_list.append(i)
     if reseed:
@@ -111,60 +118,7 @@ def LSB_decrypt(file_name_len, file_size, file_size_len, stego_array, key=0, res
 
     # Get Message Content
     while len(idx_list)>0:
-        eight_idx = idx_list[:8]
-        stego_byte = []
-        for idx in eight_idx:
-            stego_byte.append(stego_array[idx])
-        stego_char = byte_extraction(stego_byte)
-        content += stego_char
-        idx_list = idx_list[8:]
-
-    return content
-
-def LSB_encrypt_suara(audio_byte_array, prefix, content, key=0, reseed=False, random_pixel=False):
-    suara_byte_array = bytearray()
-
-    # Initialize Random Pixel List
-    idx_list = []
-    for i in range(len(prefix), len(audio_byte_array)):
-        idx_list.append(i)
-    if reseed:
-        random.seed(key)
-    if key and random_pixel:
-        random.shuffle(idx_list)
-
-    # Insert Message Description
-    for i in range(len(prefix)):
-        suara_byte_array += bytes(bit_insertion(int(audio_byte_array[i]), int(prefix[i])))  
-        # audio_byte_array[i] = bit_insertion(int(audio_byte_array[i]), int(prefix[i]))
-
-    # Insert Message
-    for i, num in enumerate(idx_list):
-        if i==len(content):
-            break
-        suara_byte_array += bytes(bit_insertion(int(audio_byte_array[num]), int(content[i])))
-
-
-    return suara_byte_array
-
-def LSB_decrypt_suara(file_name_len, file_size, file_size_len, stego_array, key=0, reseed=False, random_pixel=False):
-    # Initialize acak Pixel List
-    idx_list = []
-    content = bytearray()
-    start = 1+file_name_len if file_name_len!=0 else 0
-    start += 1+file_size_len if file_size_len!=0 else 0
-    for i in range(start*8, len(stego_array)):
-        idx_list.append(i)
-    if reseed:
-        random.seed(key)
-    if key and random_pixel:
-        random.shuffle(idx_list)
-
-    # Prune Searching List
-    idx_list = idx_list[:file_size]
-
-    # Get Message Content
-    while len(idx_list)>0:
+        # print(len(idx_list))
         eight_idx = idx_list[:8]
         stego_byte = []
         for idx in eight_idx:
@@ -224,7 +178,7 @@ class Stegano():
         image_array = LSB_encrypt(image_array, prefix, bits, key, True, key)
         
         # Save Stego Image
-        stego_image = Image.fromarray(image_array.astype('uint8'), image_type)
+        stego_image = Image.fromarray(image_array, image_type)
         stego_image.save(output_file)
         print('Stego File save as: ' + output_file)
 
@@ -258,10 +212,15 @@ class Stegano():
             stego_byte = stego_array[start:8+start]
             stego_char = ord(byte_extraction(stego_byte))
             file_size += stego_char
+        
+        # print(file_name_len)
+        # print(file_name)
+        # print(file_size_len)
         # print(file_size)
         
         content += LSB_decrypt(file_name_len, file_size, file_size_len, stego_array, key, True, acak)
         
+        # print(binary_to_bit(content)[:8])
         # Write Message
         f = open('test/message/' + file_name, 'wb')
         f.write(content)
@@ -429,72 +388,60 @@ class Stegano():
         else:
             prefix = ascii_to_bit(len(message_path)) + str_to_bit(message_path) + ascii_to_bit(int(len(int_to_bit(bits_len))/8)) + int_to_bit(bits_len)
 
-        print(prefix)
-        audio_obj.data = LSB_encrypt_suara(audio_obj.data, prefix, bits, key, True, key)
-        # a = []
-        # for i in audio_obj.data:
-        #     a.append(i)
-        # a = np.array(a)
-        # audio_obj.data = LSB_encrypt_suara(a, prefix, bits, key, True, key)
-        
-        print("Encrypted:", type(audio_obj.data), audio_obj.data[:8])
-        # print("Encrypted Last:", type(audio_obj.data), audio_obj.data[-8:])
+        audio_array = []
+        for i in audio_obj.data:
+            audio_array.append(i)
+        audio_array = np.array(audio_array)
+        audio_array = LSB_encrypt(audio_array, prefix, bits, key, True, bool(key))
+
+        audio_after_byte = bytearray()
+        for i,each in enumerate(audio_array):
+            value = int(each).to_bytes(1, byteorder='big')
+            audio_after_byte += value
+
+        audio_obj.data = audio_after_byte
 
         # Save Stego Audio
         write_audio(output_file,audio_obj)
-        # print('Stego File save as: ' + output_file)
+        print('Stego File save as: ' + output_file)
 
     @staticmethod
     def LSB_decrypt_audio(stego_audio_path, key=0):
         # Initialize Image List and Content
         stego_audio_obj = read_audio(stego_audio_path)
 
-        # print("Read from file:", type(stego_audio_obj.data), stego_audio_obj.data[:8])
+        audio_array = []
+        for i in stego_audio_obj.data:
+            audio_array.append(i)
+        audio_array = np.array(audio_array)
 
-        # stego_audio_obj.data = np.ravel(stego_audio_obj.data)
         content = bytearray()
         acak = False
-        int_arr_audio = []
-
-        for x in stego_audio_obj.data:
-            int_arr_audio.append(x)
-
-        # print("Appended into list:", type(int_arr_audio), int_arr_audio[:8])
-
-        # print("Length: ", len(int_arr_audio))
-        # print("Length: ", len(stego_audio_obj.data))
-
-        # print("Last", type(stego_audio_obj.data), stego_audio_obj.data[8:])
-        print("Read Last:", type(int_arr_audio), int_arr_audio[-8:])
 
         # Get Message File Name
-        file_name_len = ord(byte_extraction(int_arr_audio[:8]))
-        # print(file_name_len)
+        file_name_len = ord(byte_extraction(audio_array[:8]))
         if file_name_len >= 128:
             file_name_len -= 128
             acak = True
         file_name = ''
-        # print(stego_audio_obj.data)
         for i in range(file_name_len):
             start = 8*(i+1)
-            stego_byte = int_arr_audio[start:8+start]
-            print(i, "asu", stego_byte)
+            stego_byte = audio_array[start:8+start]
             stego_char = byte_extraction(stego_byte)
-            print(i, "usa", stego_char)
             file_name += stego_char.decode('utf-8')
 
         # Get Message File Size
         start = 8*(1+file_name_len)
-        file_size_len = ord(byte_extraction(int_arr_audio[start:8+start]))
+        file_size_len = ord(byte_extraction(audio_array[start:8+start]))
         file_size = 0
         for i in range(file_size_len):
             file_size = file_size << 8
             start = 8*(i+1+file_name_len+1)
-            stego_byte = int_arr_audio[start:8+start]
+            stego_byte = audio_array[start:8+start]
             stego_char = ord(byte_extraction(stego_byte))
             file_size += stego_char
         
-        content += LSB_decrypt(file_name_len, file_size, file_size_len, int_arr_audio, key, True, acak)
+        content += LSB_decrypt(file_name_len, file_size, file_size_len, audio_array, key, True, acak)
         
         # Write Message
         f = open('test/message/' + file_name, 'wb')
@@ -509,31 +456,22 @@ stego = Stegano()
 message_path = 'test/ori/tato.png'
 # ori_path = 'test/ori/LogoITB.png'
 # stego_path = 'test/stego/LogoITB.png'
-<<<<<<< HEAD
-ori_path = 'test/ori/opera.wav'
-stego_path = 'test/stego/stegopera.wav'
-=======
 # ori_path = 'test/ori/video.avi'
 # stego_path = 'test/stego/video.avi'
 ori_path = 'test/ori/opera.wav'
 stego_path = 'test/stego/opera.wav'
->>>>>>> 80d6f36af2dac89582a0f39d5d71611600307ea7
 key = 0
 
 # if stego.payload_containable_image_LSB(ori_path, message_path):
 #     stego.LSB_encrypt_image(ori_path, message_path, key)
+# stego.LSB_encrypt_image(ori_path, message_path, key)
 # stego.LSB_decrypt_image(stego_path, key)
 
-<<<<<<< HEAD
-stego.LSB_encrypt_audio(ori_path, message_path, key)
-stego.LSB_decrypt_audio(stego_path, key)
-=======
 # stego.LSB_encrypt_video(ori_path, message_path, key, True, True)
 # stego.LSB_decrypt_video(stego_path, key)
 
-# stego.LSB_encrypt_audio(ori_path, message_path, key)
-# stego.LSB_decrypt_audio(stego_path, key)
->>>>>>> 80d6f36af2dac89582a0f39d5d71611600307ea7
+stego.LSB_encrypt_audio(ori_path, message_path, key)
+stego.LSB_decrypt_audio(stego_path, key)
 
 print("--- %s seconds ---" % (time.time() - start_time))
 print("============================== End ==============================")
