@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
+from src import stegano
 
 class Application(Frame):
     def __init__(self, master=None):
@@ -106,32 +107,13 @@ class Application(Frame):
         key_label = Label(master, text="Key", font=("Helvetica", 10))
         key_label.grid(row=3, columnspan=2)
 
-        self.eKey = Text(master, height=1, width=69, font=("Consolas", 12))
+        self.eKey = Entry(master)
+        # self.eKey = Entry(master, height=1, width=69, font=("Consolas", 12))
         self.eKey.grid(row=4, column=0, padx=10)
 
-		# Opsi
-        # actionFrame = Frame()
-        # Label(master, text="Cipher Select", font=("Helvetica", 16)).grid(row=4)
-        # self.cipherOption = CipherOptions(master=actionFrame)
-        # self.cipherOption.grid(row=4, pady=(0,25))
-        # Label(actionFrame, text="Output Format", font=("Helvetica", 16)).grid(row=5)
-        # self.outputChoice = OutputChoices(master=actionFrame)
-        # self.outputChoice.grid(row=6, pady=(0,25))
-        # selectionFrame = Frame(master=actionFrame)
-        # Button(selectionFrame, text='Encrypt', command=self.encrypt).grid(row=2, column=0, padx=5, pady=4)
-        # Button(selectionFrame, text='Decrypt', command=self.decrypt).grid(row=2, column=1, padx=5, pady=4)
-        # selectionFrame.grid(row=7)
-        # actionFrame.grid(row=8, column=0, columnspan=2, pady=(0,25))
-
-		# Output
-        # outputFrame = Frame()
-        # Label(outputFrame, text="Processed Text", font=("Helvetica", 16)).grid(column=0)
-        # outputFrame.grid(row=9)
-        # self.eOutput = Text(master, height=4, width=90, font=("Consolas", 12))
-        # self.eOutput.grid(row=10, padx=10)
-        # saveFrame = Frame()
-        # Button(saveFrame, text='Save File', command=self.savefile).grid(column=1)
-        # saveFrame.grid(row=11)
+        # Encrypt Button
+        button_encrypt = Button(master, text='Encrypt', command= lambda: self.encrypt(self.stegopath, self.messagepath, self.method, self.encrypt, self.eKey.get()))
+        button_encrypt.grid(row=5, columnspan=2)
 
     def askopenfile(self, pathfile, filetype, label):
 
@@ -152,23 +134,42 @@ class Application(Frame):
             self.message_render = ImageTk.PhotoImage(resized)
             label.configure(image=self.message_render)
                         
+    def encrypt(stegopath, messagepath, method, encrypt_mode=0, key=0):
+        X = Stegano()
 
-    # def savefile(self):
-    #     if (type(self.cipherOption.getCipher()) is cp.VigenereExtended):
-    #         messagebox.showwarning("Warning", "Tidak bisa menyimpan file untuk Extenede Vigenere Cipher")
-    #     elif (len(self.eOutput.get("1.0", "end-1c")) == 0):
-    #         messagebox.showwarning("Warning", "Output masih kosong!")
-    #     else:
-    #         filename =  filedialog.asksaveasfilename(title = "Save As",filetypes = (("Text Files","*.txt"),("All Files","*.*")))
-    #         f = open(filename,"w")
-    #         f.write(self.eOutput.get("1.0", "end-1c"))
-    #         f.close()
-
-    # def validate(self):
-    #     if (len(self.eInput.get("1.0", "end-1c")) == 0):
-    #         messagebox.showwarning("Warning", "Input tidak boleh kosong!")
-    #     else:
-    #         return True
+        if encrypt_mode:
+            print("encrypted")
+    
+        if method == 111 : # Image, seq LSB
+            pass
+            X.LSB_encrypt_image(stegopath, messagepath, 0)
+        elif method == 112 : # Image, rand LSB
+            pass
+            X.LSB_encrypt_image(stegopath, messagepath, key)
+        elif method == 121 : # Image, seq BPCS
+            pass
+        elif method == 122 : # Image, rand BPCS
+            pass
+        elif method == 211 : # Video, seq frame seq px
+            pass
+            X.LSB_encrypt_video(stegopath, messagepath, 0, False, False)
+        elif method == 212 : # Video, seq frame rand px
+            pass
+            X.LSB_encrypt_video(stegopath, messagepath, key, False, True)
+        elif method == 221 : # Video, rand frame seq px
+            pass
+            X.LSB_encrypt_video(stegopath, messagepath, key, True, False)
+        elif method == 222 : # Video, rand frame rand px
+            pass
+            X.LSB_encrypt_video(stegopath, messagepath, key, True, True)
+        elif method == 311 : # Audio, seq LSB
+            pass
+            X.LSB_encrypt_audio(stegopath, messagepath, 0)
+        elif method == 312 : # Audio, rand LSB
+            pass
+            X.LSB_encrypt_audio(stegopath, messagepath, key)
+        else:
+            print("Error, Please choose a method")
 
 if __name__ == "__main__":
     gui = Tk()
