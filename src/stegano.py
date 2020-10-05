@@ -3,6 +3,7 @@ import numpy as np
 from math import log10, sqrt, ceil
 import os, random, time, cv2
 import skvideo.io
+import wave
 
 # File Management
 def read_image(path):
@@ -18,9 +19,6 @@ def read_file(path):
     f.close()
 
     return content
-
-
-
 
 # Bitwise Functions
 def str_to_bit(text):
@@ -59,8 +57,6 @@ def byte_extraction(l):
 
 def binary_to_bit(content):
     return ''.join(ascii_to_bit(i) for i in content)
-
-
 
 def LSB_encrypt(image_array, prefix, content, key=0, reseed=False, random_pixel=False):
     dim = image_array.shape
@@ -117,7 +113,26 @@ def LSB_decrypt(file_name_len, file_size, file_size_len, stego_array, key=0, res
 
     return content
 
+def read_audio(filename):
+    file = wave.open(filename, "rb")
+    data = file.readframes(file.getnframes())
+    file.close()
+    return Audio(data, file.getnchannels(), file.getsampwidth(), file.getframerate())
 
+def write_audio(filename, audio_obj):
+    file = wave.open(filename, "wb")
+    file.setnchannels(audio_obj.nchannel)
+    file.setsampwidth(audio_obj.sampwidth)
+    file.setframerate(audio_obj.framerate)
+    file.writeframes(audio_obj.data)
+    file.close()
+
+class Audio:
+    def __init__(self, data, nchannel, sample_width, framerate):
+        self.data = data
+        self.nchannel = nchannel
+        self.sample_width = sample_width
+        self.framerate = framerate
 
 # Steganography Main Class
 class Stegano():
@@ -339,6 +354,71 @@ class Stegano():
         f = open('b.txt', 'w')
         f.write(binary_to_bit(content))
         f.close()
+        f = open('test/message/' + file_name, 'wb')
+        f.write(content)
+        f.close()
+        print('Message File Saved as ' + file_name)
+
+    @staticmethod
+    def LSB_encrypt_audio(audio_path, message_path, key=0):
+        # Initialize
+        audio_obj = read_audio(audio_path)
+        audio_path = audio_path.split('/')
+        output_file = audio_path[0] + '/stego/' + audio_path[2]
+
+        content = read_file(message_path)
+
+        message_path = message_path.split('/')
+        message_path = message_path[-1]
+
+         # Message and Description Into Bit
+        bits = binary_to_bit(content)
+        bits_len = len(bits)
+        if key:
+            prefix = ascii_to_bit(len(message_path)+128) + str_to_bit(message_path) + ascii_to_bit(int(len(int_to_bit(bits_len))/8)) + int_to_bit(bits_len)
+        else:
+            prefix = ascii_to_bit(len(message_path)) + str_to_bit(message_path) + ascii_to_bit(int(len(int_to_bit(bits_len))/8)) + int_to_bit(bits_len)
+
+        audio_obj.data = LSB_encrypt(audio_obj, prefix, bits, key, True, key)
+        
+        # Save Stego Audio
+        write_audio(output_file,stego_audio)
+        print('Stego File save as: ' + output_file)
+
+    @staticmethod
+    def LSB_decrypt_audio(stego_audio_path, key=0):
+        # Initialize Image List and Content
+        stego_audio_obj = read_audio(stego_audio_path)
+        stego_audio_obj.data = np.ravel(stego_audio_obj.data)
+        content = bytearray()
+        acak = False
+
+        # Get Message File Name
+        file_name_len = ord(byte_extraction(stego_audio_obj.data[:8]))
+        if file_name_len >= 128:
+            file_name_len -= 128
+            acak = True
+        file_name = ''
+        for i in range(file_name_len):
+            start = 8*(i+1)
+            stego_byte = stego_audio_obj.data[start:8+start]
+            stego_char = byte_extraction(stego_byte)
+            file_name += stego_char.decode('utf-8')
+
+        # Get Message File Size
+        start = 8*(1+file_name_len)
+        file_size_len = ord(byte_extraction(stego_audio_obj.data[start:8+start]))
+        file_size = 0
+        for i in range(file_size_len):
+            file_size = file_size << 8
+            start = 8*(i+1+file_name_len+1)
+            stego_byte = stego_audio_obj.data[start:8+start]
+            stego_char = ord(byte_extraction(stego_byte))
+            file_size += stego_char
+        
+        content += LSB_decrypt(file_name_len, file_size, file_size_len, stego_audio_obj.data, key, True, acak)
+        
+        # Write Message
         f = open('test/message/' + file_name, 'wb')
         f.write(content)
         f.close()
