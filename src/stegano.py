@@ -1,7 +1,7 @@
 from PIL import Image
 import numpy as np
 from math import log10, sqrt, ceil
-import os, random, time, cv2
+import os, random, time
 import skvideo.io
 import wave
 
@@ -233,11 +233,6 @@ class Stegano():
         key=0, random_frame=False, random_pixel=False
         ):
         frames = skvideo.io.vread(video_path)
-        # frames = []
-        # gen = skvideo.io.vreader(video_path)
-        # frames.append(next(gen))
-        # frames.append(next(gen))
-        # frames = np.array(frames)
         initial_dim = frames.shape
 
         video_path = video_path.split('/')
@@ -285,7 +280,6 @@ class Stegano():
             )
 
         for i in range(len(frames)):
-            # print(np.ravel(frames[i])[:8])
             writer.writeFrame(frames[i])
 
         writer.close()
@@ -296,10 +290,6 @@ class Stegano():
         # Initialize
         frames = skvideo.io.vread(stego_path)
         initial_dim = frames.shape
-
-        # print(np.ravel(frames[0])[:8])
-        # print(np.ravel(frames[1])[:8])
-        # return
 
         content = bytearray()
         random_frame, random_pixel = False, False
@@ -330,7 +320,6 @@ class Stegano():
             stego_byte = current_frame_array[start:8+start]
             stego_char = ord(byte_extraction(stego_byte))
             file_size += stego_char
-        # print(file_size)
 
         frame_size = initial_dim[1] * initial_dim[2] * initial_dim[3]
         reseed = True
@@ -351,9 +340,6 @@ class Stegano():
             file_size = file_size-frame_size if file_size>frame_size else 0
         
         # Write Message
-        f = open('b.txt', 'w')
-        f.write(binary_to_bit(content))
-        f.close()
         f = open('test/message/' + file_name, 'wb')
         f.write(content)
         f.close()
@@ -431,16 +417,21 @@ stego = Stegano()
 message_path = 'test/ori/tato.png'
 # ori_path = 'test/ori/LogoITB.png'
 # stego_path = 'test/stego/LogoITB.png'
-ori_path = 'test/ori/video.avi'
-stego_path = 'test/stego/video.avi'
-key = 50
+# ori_path = 'test/ori/video.avi'
+# stego_path = 'test/stego/video.avi'
+ori_path = 'test/ori/opera.wav'
+stego_path = 'test/stego/opera.wav'
+key = 0
 
 # if stego.payload_containable_image_LSB(ori_path, message_path):
 #     stego.LSB_encrypt_image(ori_path, message_path, key)
 # stego.LSB_decrypt_image(stego_path, key)
 
-stego.LSB_encrypt_video(ori_path, message_path, key, True, True)
-stego.LSB_decrypt_video(stego_path, key)
+# stego.LSB_encrypt_video(ori_path, message_path, key, True, True)
+# stego.LSB_decrypt_video(stego_path, key)
+
+# stego.LSB_encrypt_audio(ori_path, message_path, key)
+# stego.LSB_decrypt_audio(stego_path, key)
 
 print("--- %s seconds ---" % (time.time() - start_time))
 print("============================== End ==============================")
