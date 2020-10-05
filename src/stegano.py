@@ -39,6 +39,7 @@ def str_to_bit(text):
     return result
 
 def ascii_to_bit(num):
+    # print(num)
     bit = bin(num)[2:]
     while len(bit)<8:
         bit = '0' + bit
@@ -63,8 +64,14 @@ def byte_extraction(l):
 def binary_to_bit(content):
     return ''.join(ascii_to_bit(i) for i in content)
 
+def bin_arr_to_bit(content):
+    res = []
+    for byte in content:
+        res.append(ascii_to_bit(byte))
+    return res
+
 def max_prob(height, width):
-    return( ((height-1)*width) + (height*(width -1)) )
+    return( (((height-1)*width) + (height*(width -1))))
 
 def divide_to_planes(bit_array, arr_dim):
     res = []
@@ -84,9 +91,171 @@ def divide_to_planes(bit_array, arr_dim):
                 temp_arr1.append(temp_arr2)
             res.append(temp_arr1)
     return res
-    
 
-def bpcs_encrypt(image_path, message_path, threshold=0.3):
+def divide_msg_to_planes(message):
+    # print(message)
+    res = []
+    nbBlocks = (len(message) // 8) if(len(message) % 8 == 0) else (len(message) // 8 + 1)
+    temp = []
+    temp1 = []
+    for i in range(nbBlocks):
+        # print(message[i])
+        temp1.append(message[i])
+        if( len(temp1) == 8):
+            # print(temp1)
+            temp.append(temp1)
+            temp1 = []
+        if(len(temp) == 8):
+            # print(temp)
+            res.append(temp)
+            temp = []
+    return res
+
+def generate_plane_cunjugation(width, height):
+    init_bit = "0"
+    res = []
+    for i in range(height):
+        temp = []
+        bit = init_bit
+        for j in range(width):
+            temp.append(bit)
+            bit = "1" if(bit == "0") else "0"
+        init_bit = "1" if (init_bit == "0") else "0"
+        res.append(temp)
+    # print(res)
+    return res
+
+def conjugate_plane(plane, plane_dim):
+    width = plane_dim[0]
+    height = plane_dim[1]
+    conjugation_plane = generate_plane_cunjugation(width, height)
+
+    for i in range(height):
+        # print('i = ', i)
+        for j in range(width):
+            # print('j = ', j)
+            plane[i][j] = str(int(plane[i][j]) ^  int(conjugation_plane[i][j]))
+    return plane
+
+def div_planes_per_bits(plane):
+    res = []
+    # print(plane)
+    nbRow = len(plane)
+    nbCol = len(plane[0])
+    for pos in range(8):
+        temp = []
+        for i in range(nbRow):
+            temp1 = []
+            for j in range(nbCol):
+                # print(i,j,pos)
+                # print(plane[i][j])
+                temp1.append(plane[i][j][pos])
+            temp.append(temp1)
+        res.append(temp)
+    return res
+
+def transform_pbc_to_bits(planes):
+    res = []
+    for row in planes:
+        res.append(div_planes_per_bits(row))
+    return res
+
+def transform_pbc_cgc(plane):
+    res = plane.copy()
+    nbRow = len(plane)
+    for i in range(nbRow):
+        nbCol = len(plane[i])
+        for j in range(nbCol):
+            res[i][j] = (plane[i][j] ^ plane[i][j-1]) if ( j != 0 and isinstance(plane[i][j], str) ) else plane[i][j]
+    return res
+
+# dim = width x height
+def isPlaneNoiseRegion(plane, threshold, dim):
+    nbChange = 0
+    nbRow = len(plane)
+    nbCol = len(plane[0])
+    # print(nbRow, nbCol)
+    for i in range(nbRow):
+        for j in range(nbCol):
+            # print(i,j)
+            if i == 0:
+                if j == 0:
+                    nbChange += 1 if(plane[i][j] != plane[i][j+1]) else 0
+                else:
+                    if(j != (nbCol - 1)):
+                        nbChange += 1 if(plane[i][j] != plane[i][j+1]) else 0
+                    nbChange += 1 if(plane[i][j] != plane[i][j-1]) else 0
+                nbChange += 1 if(plane[i][j] != plane[i+1][j]) else 0
+            else:
+                if j == 0:
+                    if(i != (nbRow-1)):
+                        nbChange += 1 if(plane[i][j] != plane[i+1][j]) else 0
+                    nbChange += 1 if(plane[i][j] != plane[i][j+1]) else 0
+                    nbChange += 1 if(plane[i][j] != plane[i-1][j]) else 0
+                else:
+                    if(i != (nbRow - 1)):
+                        if(j != (nbCol - 1)):
+                            nbChange += 1 if(plane[i][j] != plane[i][j+1]) else 0
+                        nbChange += 1 if(plane[i][j] != plane[i+1][j]) else 0
+                    else:
+                        if(j != (nbCol - 1)):
+                            nbChange += 1 if(plane[i][j] != plane[i][j+1]) else 0
+                    nbChange += 1 if(plane[i][j] != plane[i-1][j]) else 0
+                    nbChange += 1 if(plane[i][j] != plane[i][j-1]) else 0
+    alpha = (nbChange/max_prob(dim[0], dim[1]) / 2)
+    # print(nbChange/2, max_prob(dim[0], dim[1]))
+    return ( (alpha >= threshold),  alpha)
+    #  return if plane is noise region and the alpha of the plane
+
+def insertToPlane(img, msg):
+    return img
+
+def writeTo(text, name):
+    with open(name, 'w') as f:
+        for item in text:
+            f.write("%s\n" % item)
+
+def bpcs_encrypt(image_path, message_path, key=0, threshold=0.3):
+    # Initialize
+    image_array, initial_dim = read_image(image_path)
+    image_path = image_path.split('/')
+    output_file = image_path[0] + '/stego/' + image_path[2]
+
+    content = read_file(message_path)
+
+    message_path = message_path.split('/')
+    message_path = message_path[-1]
+
+    # transform image array to 8 x 8 pixel array
+    img_arr = divide_to_planes(bin_arr_to_bit(image_array), initial_dim)
+
+    # transform image array from pbc to cgc
+    cgc_img = transform_pbc_cgc(img_arr)
+
+    # transform message byte into bits
+    message = bin_arr_to_bit(content)
+
+    # transforms bits message into 8x8 pixel arrays
+    msg = divide_msg_to_planes(message)
+    plane_msg = []
+    for temp_msg in msg:
+        plane_msg.append(div_planes_per_bits(temp_msg))
+
+
+    # check if conjugation necessary
+    conjugate_map = [] # list of message index with conjugation and message length
+    conjugate_map.append(len(plane_msg)) # number of message blocks
+    i = 0
+    for temp in plane_msg:
+        for plane in temp:
+            isNoise, alpha = isPlaneNoiseRegion(plane, threshold, [len(plane[0]), len(plane)])
+            if(not(isNoise)):
+                plane = conjugate_plane(plane, [len(plane[0]), len(plane)])
+                conjugate_map.append(i)
+            i+=1
+    
+    # insert message
+
     return
 
 
@@ -95,11 +264,14 @@ class Stegano():
     @staticmethod
     def LSB_encrypt_image(image_path, message_path, key=0):
         # Initialize
-        output_file = image_path[:-4] + '-stego' + image_path[-4:]
         image_array, initial_dim = read_image(image_path)
+        image_path = image_path.split('/')
+        output_file = image_path[0] + '/stego/' + image_path[2]
 
-        # Read Message File
         content = read_file(message_path)
+
+        message_path = message_path.split('/')
+        message_path = message_path[-1]
 
         # Message and Description Into Bit
         bits = binary_to_bit(content)
@@ -187,7 +359,7 @@ class Stegano():
             idx_list = idx_list[8:]
         
         # Write Message
-        f = open(file_name, 'wb')
+        f = open('test/message/' + file_name, 'wb')
         f.write(content)
         f.close()
         print('Message File Saved as ' + file_name)
@@ -214,18 +386,22 @@ class Stegano():
         else:
             return False
 
+
+
 # print("============================== Start ==============================")
 # start_time = time.time()
 # stego = Stegano()
 
-# ori_path = 'LogoITB.png'
-# message_path = 'tato.png'
-# # stego_path = 'LogoITB-stego.png'
-# key = 50
+ori_path = '../test/ori/LogoITB.png'
+message_path = '../test/ori/tato.png'
+# stego_path = 'test/stego/LogoITB.png'
+key = 50
+threshold = 0.3
 
+bpcs_encrypt(ori_path, message_path, key, threshold)
 # # if stego.payload_containable_image_LSB(ori_path, message_path):
 # #     stego.LSB_encrypt_image(ori_path, message_path, key)
-# # stego.LSB_decrypt_image(stego_path, key)
+# stego.LSB_decrypt_image(stego_path, key)
 
-# print("--- %s seconds ---" % (time.time() - start_time))
-# print("============================== End ==============================")
+# # print("--- %s seconds ---" % (time.time() - start_time))
+# # print("============================== End ==============================")
