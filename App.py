@@ -2,6 +2,8 @@ from tkinter import *
 from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
 from src import stegano
+from src import crypto
+import os
 
 class Application(Frame):
     def __init__(self, master=None):
@@ -11,15 +13,23 @@ class Application(Frame):
         self.master = master
         self.stegopath = None
         self.messagepath = None
+        self.decryptpath = None
         self.stego_render = None
         self.message_render = None
         # self.stegofile = IntVar()
         self.encrypt = IntVar()
         self.method = IntVar()
+        # self.eKey = IntVar()
 
         # Frames
+        encryptMaster = Frame(master)
+        encryptMaster.grid(row=0, column=0)
+
+        decryptMaster = Frame(master)
+        decryptMaster.grid(row=0, column=1)
+
         # A. Config Frame
-        configFrame = Frame(master)
+        configFrame = Frame(encryptMaster)
         configFrame.grid(row=0)
 
         # A.1. Method Frame
@@ -35,11 +45,11 @@ class Application(Frame):
         audioMethodFrame.grid(row=0,column=2, sticky="new", padx=5)
 
         # B. Input Frame
-        inputFrame = Frame(master, relief="sunken")
+        inputFrame = Frame(encryptMaster, relief="sunken")
         inputFrame.grid(row=1)
 
         # C. Show Frame
-        showFrame = Frame(master)
+        showFrame = Frame(encryptMaster)
         showFrame.grid(row=2)
 
         # Encrpytion
@@ -96,6 +106,13 @@ class Application(Frame):
         message_image_show_label.configure(image=render)
         stego_image_show_label.configure(image=render)
 
+        # Open Media
+        button_open_stego = Button(showFrame, text='Open Stego Media', command= lambda: self.playmedia(self.stegopath))
+        button_open_stego.grid(row=1, column=0)
+        
+        button_open_message = Button(showFrame, text='Open Message Media', command= lambda: self.playmedia(self.messagepath))
+        button_open_message.grid(row=1, column=1)
+
 		# Input
         button_load_stego_file = Button(inputFrame, text='Load Stego File', command= lambda: self.askopenfile(self.stegopath, "stego", stego_image_show_label))
         button_load_stego_file.grid(row=0, column=0, sticky=N, pady=5, padx=5)
@@ -104,16 +121,62 @@ class Application(Frame):
         button_load_message_file.grid(row=0, column=1, sticky=N, pady=5, padx=5)
 
 		# Key
-        key_label = Label(master, text="Key", font=("Helvetica", 10))
+        key_label = Label(encryptMaster, text="Key", font=("Helvetica", 10))
         key_label.grid(row=3, columnspan=2)
 
-        self.eKey = Entry(master)
-        # self.eKey = Entry(master, height=1, width=69, font=("Consolas", 12))
-        self.eKey.grid(row=4, column=0, padx=10)
+        self.eKey = Entry(encryptMaster)
+        # self.eKey = Entry(encryptMaster, height=1, width=69, font=("Consolas", 12))
+        self.eKey.grid(row=4, column=0, padx=10, pady=5)
 
         # Encrypt Button
-        button_encrypt = Button(master, text='Encrypt', command= lambda: self.encrypt(self.stegopath, self.messagepath, self.method, self.encrypt, self.eKey.get()))
+        button_encrypt = Button(encryptMaster, text='Encrypt', command= self.callencrypt)
         button_encrypt.grid(row=5, columnspan=2)
+        
+        # Decrpyt File
+        button_load_decrypt_file = Button(decryptMaster, text='Load Decryption File', command= lambda: self.askopenfile(self.decryptpath, "decrypt", message_image_show_label))
+        button_load_decrypt_file.grid(row=0, column=1, sticky=N, pady=5, padx=5)
+
+        # Decrypt Method
+        decrypt_image = Radiobutton(decryptMaster, text="Decrypt Image", variable=self.method, value=91)
+        decrypt_image.grid(row=1, column=0, sticky=N)
+        decrypt_video = Radiobutton(decryptMaster, text="Decrypt Video", variable=self.method, value=92)
+        decrypt_video.grid(row=1, column=1, sticky=N)
+        decrpyt_audio = Radiobutton(decryptMaster, text="Decrypt Audio", variable=self.method, value=93)
+        decrpyt_audio.grid(row=1, column=2, sticky=N)
+
+        # Decrypt Button
+        button_decrypt = Button(decryptMaster, text='Decrypt', command= self.calldecrypt)
+        button_decrypt.grid(row=2, columnspan=2, sticky=N)
+
+    def callencrypt(self):
+        try:
+            stringkey = self.eKey.get()
+            key = int(stringkey)
+        except:
+            key = 0
+
+        # stego_path = self.stegopath.get()
+        # message_path = self.messagepath.get()
+        methoda = self.method.get()
+        enkrip = self.encrypt.get()
+        print("method",methoda)
+        print("enkr",enkrip)
+        print("key",key)
+        print("stegopath", self.stegopath)
+        print("messagepath", self.messagepath)
+
+        self.encrypt(self.stegopath, self.messagepath, self.method, self.encrypt, key)
+
+    def calldecrypt(self):
+        try:
+            key = self.eKey.get()
+        except:
+            key = 0
+        self.decrypt(self.stegopath, self.messagepath, self.method, self.encrypt, key)
+
+    def playmedia(self, pathfile):
+        print(pathfile)
+        os.startfile(pathfile)
 
     def askopenfile(self, pathfile, filetype, label):
 
@@ -124,15 +187,26 @@ class Application(Frame):
             print("File cannot be empty")
 
         if filetype == "stego":
-            load = Image.open(pathfile)
-            resized = load.resize((300, 300), Image.ANTIALIAS)
-            self.stego_render = ImageTk.PhotoImage(resized)
-            label.configure(image=self.stego_render)
-        elif filetype == "message":
-            load = Image.open(pathfile)
-            resized = load.resize((300, 300), Image.ANTIALIAS)
-            self.message_render = ImageTk.PhotoImage(resized)
-            label.configure(image=self.message_render)
+            self.stegopath = filepath
+        else:
+            self.messagepath = filepath
+
+        try:
+            if filetype == "stego":
+                load = Image.open(pathfile)
+                resized = load.resize((300, 300), Image.ANTIALIAS)
+                self.stego_render = ImageTk.PhotoImage(resized)
+                label.configure(image=self.stego_render)
+            elif filetype == "message":
+                load = Image.open(pathfile)
+                resized = load.resize((300, 300), Image.ANTIALIAS)
+                self.message_render = ImageTk.PhotoImage(resized)
+                label.configure(image=self.message_render)
+            else:
+                pass
+        except:
+            print("Not an Image")
+            
                         
     def encrypt(stegopath, messagepath, method, encrypt_mode=0, key=0):
         X = Stegano()
@@ -171,9 +245,12 @@ class Application(Frame):
         else:
             print("Error, Please choose a method")
 
+    def decrypt(stegopath, stegotype, key):
+        print("decrypt")
+
 if __name__ == "__main__":
     gui = Tk()
     gui.title("Tubes 1 Kriptografi - Cryptosteganography")
-    gui.geometry('{}x{}'.format(645, 600))
+    gui.geometry('{}x{}'.format(1000, 620))
     app = Application(master=gui)
     app.mainloop()

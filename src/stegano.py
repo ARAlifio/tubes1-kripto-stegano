@@ -449,29 +449,29 @@ class Stegano():
         f.close()
         print('Message File Saved as ' + file_name)
 
-print("============================== Start ==============================")
-start_time = time.time()
-stego = Stegano()
+# print("============================== Start ==============================")
+# start_time = time.time()
+# stego = Stegano()
 
-message_path = 'test/ori/tato.png'
-# ori_path = 'test/ori/LogoITB.png'
-# stego_path = 'test/stego/LogoITB.png'
-# ori_path = 'test/ori/video.avi'
-# stego_path = 'test/stego/video.avi'
-ori_path = 'test/ori/opera.wav'
-stego_path = 'test/stego/opera.wav'
-key = 0
+# message_path = 'test/ori/tato.png'
+# # ori_path = 'test/ori/LogoITB.png'
+# # stego_path = 'test/stego/LogoITB.png'
+# # ori_path = 'test/ori/video.avi'
+# # stego_path = 'test/stego/video.avi'
+# ori_path = 'test/ori/opera.wav'
+# stego_path = 'test/stego/opera.wav'
+# key = 0
 
-# if stego.payload_containable_image_LSB(ori_path, message_path):
-#     stego.LSB_encrypt_image(ori_path, message_path, key)
-# stego.LSB_encrypt_image(ori_path, message_path, key)
-# stego.LSB_decrypt_image(stego_path, key)
+# # if stego.payload_containable_image_LSB(ori_path, message_path):
+# #     stego.LSB_encrypt_image(ori_path, message_path, key)
+# # stego.LSB_encrypt_image(ori_path, message_path, key)
+# # stego.LSB_decrypt_image(stego_path, key)
 
-# stego.LSB_encrypt_video(ori_path, message_path, key, True, True)
-# stego.LSB_decrypt_video(stego_path, key)
+# # stego.LSB_encrypt_video(ori_path, message_path, key, True, True)
+# # stego.LSB_decrypt_video(stego_path, key)
 
-stego.LSB_encrypt_audio(ori_path, message_path, key)
-stego.LSB_decrypt_audio(stego_path, key)
+# stego.LSB_encrypt_audio(ori_path, message_path, key)
+# stego.LSB_decrypt_audio(stego_path, key)
 
-print("--- %s seconds ---" % (time.time() - start_time))
-print("============================== End ==============================")
+# print("--- %s seconds ---" % (time.time() - start_time))
+# print("============================== End ==============================")
